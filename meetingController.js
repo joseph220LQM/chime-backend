@@ -1,10 +1,16 @@
 // meetingController.js
-import { ChimeSDKMeetingsClient, CreateMeetingCommand, CreateAttendeeCommand } from "@aws-sdk/client-chime-sdk-meetings";
+import {
+  ChimeSDKMeetingsClient,
+  CreateMeetingCommand,
+  CreateAttendeeCommand,
+} from "@aws-sdk/client-chime-sdk-meetings";
 import { v4 as uuidv4 } from "uuid";
 
-const client = new ChimeSDKMeetingsClient({ region: process.env.AWS_REGION });
+const client = new ChimeSDKMeetingsClient({
+  region: process.env.AWS_REGION,
+});
 
-let currentMeeting = null; // memoria temporal
+let currentMeeting = null; // memoria temporal para mantener una reunión activa
 
 export async function joinMeeting(req, res) {
   const { name } = req.body;
@@ -15,7 +21,7 @@ export async function joinMeeting(req, res) {
     if (!currentMeeting) {
       const meetingResponse = await client.send(
         new CreateMeetingCommand({
-          ClientRequestToken: `${Date.now()}-${Math.random()}`,
+          ClientRequestToken: `${Date.now()}-${uuidv4()}`, // ✅ token válido
           MediaRegion: process.env.AWS_REGION,
           ExternalMeetingId: `meeting-${Date.now()}`,
         })
@@ -31,17 +37,19 @@ export async function joinMeeting(req, res) {
         ExternalUserId: name.replace(/\s/g, "_"),
       })
     );
+
     console.log("✅ Attendee creado:", attendeeResponse.Attendee);
 
     res.json({
       Meeting: currentMeeting,
       Attendee: attendeeResponse.Attendee,
     });
-
   } catch (err) {
     console.error("❌ Error en joinMeeting:", err);
-    res.status(500).json({ error: err.message, details: err });
+    // Evitar stringify de objetos circulares
+    res.status(500).json({ error: err.message });
   }
 }
+
 
 
