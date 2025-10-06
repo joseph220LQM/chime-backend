@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import { joinMeeting } from "./meetingController.js";
 import { startEchoBot } from "./echobot.js";
 import pkg from "@aws-sdk/client-chime-sdk-media-pipelines";
-const { ChimeSDKMediaPipelinesClient, CreateMediaPipelineCommand } = pkg;
+const { ChimeSDKMediaPipelinesClient, CreateMediaConcatenationPipelineCommand } = pkg;
 
 dotenv.config();
 
@@ -16,7 +16,6 @@ app.post("/join", async (req, res) => {
   try {
     const meetingData = await joinMeeting(req, res);
 
-    // 🚀 Crear pipeline de audio en tiempo real
     const client = new ChimeSDKMediaPipelinesClient({
       region: process.env.AWS_REGION,
       credentials: {
@@ -26,24 +25,42 @@ app.post("/join", async (req, res) => {
     });
 
     const pipelineParams = {
-      MediaPipelineType: "AudioConcatenation",
-      AudioConcatenationConfiguration: {
-        State: "Enabled",
-      },
+      Sources: [
+        {
+          Type: "MediaCapturePipelineSource",
+          MediaCapturePipelineSourceConfiguration: {
+            ChimeSdkMeetingConfiguration: {
+              SourceType: "ChimeSdkMeeting",
+              MeetingId: meetingData.Meeting.MeetingId,
+            },
+          },
+        },
+      ],
+      Sinks: [
+        {
+          Type: "S3BucketSink",
+          S3BucketSinkConfiguration: {
+            Destination: `s3://${process.env.AWS_S3_BUCKET_NAME}/audio/`,
+          },
+        },
+      ],
     };
 
-    await client.send(new CreateMediaPipelineCommand(pipelineParams));
+    await client.send(new CreateMediaConcatenationPipelineCommand(pipelineParams));
 
-    // 🤖 Iniciar bot de repetición
+    // 🤖 Iniciar EchoBot
     startEchoBot(
       meetingData.Meeting.MeetingId,
       meetingData.Attendee.AttendeeId,
       meetingData.Attendee.JoinToken
     );
 
+    res.json(meetingData);
+
   } catch (error) {
     console.error("❌ Error al crear pipeline o bot:", error);
-    res.status(500).json({ error: "Error al unirse a la reunión" });
+    if (!res.headersSent)
+      res.status(500).json({ error: "Error al unirse a la reunión" });
   }
 });
 
