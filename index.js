@@ -3,7 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { joinMeeting } from "./meetingController.js";
 import { startEchoBot } from "./echobot.js";
-import { ChimeSDKMediaPipelinesClient, CreateMediaPipelineCommand } from "@aws-sdk/client-chime-sdk-media-pipelines";
+import pkg from "@aws-sdk/client-chime-sdk-media-pipelines";
+const { ChimeSDKMediaPipelinesClient, CreateMediaPipelineCommand } = pkg;
 
 dotenv.config();
 
