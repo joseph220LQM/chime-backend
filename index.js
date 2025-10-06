@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import { joinMeeting } from "./meetingController.js";
 import { startEchoBot } from "./echobot.js";
 import pkg from "@aws-sdk/client-chime-sdk-media-pipelines";
-const { ChimeSDKMediaPipelinesClient, CreateMediaConcatenationPipelineCommand } = pkg;
+const { ChimeSDKMediaPipelinesClient, CreateMediaCapturePipelineCommand } = pkg;
 
 dotenv.config();
 
@@ -24,31 +24,19 @@ app.post("/join", async (req, res) => {
       },
     });
 
+    // 🧩 Pipeline para capturar audio de la reunión
     const pipelineParams = {
-      Sources: [
-        {
-          Type: "MediaCapturePipelineSource",
-          MediaCapturePipelineSourceConfiguration: {
-            ChimeSdkMeetingConfiguration: {
-              SourceType: "ChimeSdkMeeting",
-              MeetingId: meetingData.Meeting.MeetingId,
-            },
-          },
-        },
-      ],
-      Sinks: [
-        {
-          Type: "S3BucketSink",
-          S3BucketSinkConfiguration: {
-            Destination: `s3://${process.env.AWS_S3_BUCKET_NAME}/audio/`,
-          },
-        },
-      ],
+      SourceType: "ChimeSdkMeeting",
+      SourceArn: `arn:aws:chime::${process.env.AWS_ACCOUNT_ID}:meeting/${meetingData.Meeting.MeetingId}`,
+      SinkType: "S3Bucket",
+      SinkArn: `arn:aws:s3:::${process.env.AWS_S3_BUCKET_NAME}`,
     };
 
-    await client.send(new CreateMediaConcatenationPipelineCommand(pipelineParams));
+    const pipeline = await client.send(new CreateMediaCapturePipelineCommand(pipelineParams));
 
-    // 🤖 Iniciar EchoBot
+    console.log(`✅ Media pipeline creada: ${pipeline.MediaCapturePipeline?.MediaPipelineId}`);
+
+    // 🤖 Iniciar EchoBot (repetidor)
     startEchoBot(
       meetingData.Meeting.MeetingId,
       meetingData.Attendee.AttendeeId,
