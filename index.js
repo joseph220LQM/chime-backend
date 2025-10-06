@@ -12,6 +12,7 @@ const app = express();
 app.use(cors({
   origin: "https://chime-frontend-gamma.vercel.app",
   methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
 app.use(express.json());
