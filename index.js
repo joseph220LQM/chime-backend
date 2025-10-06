@@ -1,68 +1,68 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { ChimeSDKMeetingsClient, CreateMeetingCommand, CreateAttendeeCommand } from "@aws-sdk/client-chime-sdk-meetings";
-import { ChimeSDKMediaPipelinesClient, CreateMediaCapturePipelineCommand } from "@aws-sdk/client-chime-sdk-media-pipelines";
-import { startEchoBot } from "./echoBot.js";
+import { joinMeeting } from "./meetingController.js";
+import { startEchoBot } from "./echobot.js";
+import pkg from "@aws-sdk/client-chime-sdk-media-pipelines";
+const { ChimeSDKMediaPipelinesClient, CreateMediaCapturePipelineCommand } = pkg;
 
 dotenv.config();
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: "https://chime-frontend-gamma.vercel.app" }));
 app.use(express.json());
-
-const meetingsClient = new ChimeSDKMeetingsClient({ region: process.env.AWS_REGION });
-const mediaPipelinesClient = new ChimeSDKMediaPipelinesClient({ region: process.env.AWS_REGION });
 
 app.post("/join", async (req, res) => {
   try {
-    // Crear reunión
-    const meetingResponse = await meetingsClient.send(
-      new CreateMeetingCommand({
-        ClientRequestId: Date.now().toString(),
-        MediaRegion: process.env.AWS_REGION,
-      })
-    );
+    // 🧩 Crear reunión y obtener datos
+    const meetingData = await joinMeeting(req);
 
-    const meeting = meetingResponse.Meeting;
-    console.log("✅ Nueva reunión creada:", meeting.MeetingId);
-
-    // Crear participante
-    const attendeeResponse = await meetingsClient.send(
-      new CreateAttendeeCommand({
-        MeetingId: meeting.MeetingId,
-        ExternalUserId: `user-${Date.now()}`,
-      })
-    );
-
-    const attendee = attendeeResponse.Attendee;
-
-    // Crear media pipeline
-    const mediaPipelineResponse = await mediaPipelinesClient.send(
-      new CreateMediaCapturePipelineCommand({
-        SourceType: "ChimeSdkMeeting",
-        SourceArn: meeting.MediaPlacement.AudioHostUrl,
-        SinkType: "S3Bucket",
-        SinkArn: process.env.S3_ARN, // debe estar configurado
-      })
-    );
-
-    console.log("✅ Media pipeline creada:", mediaPipelineResponse.MediaCapturePipeline.MediaPipelineId);
-
-    // Iniciar el bot en segundo plano (no bloquea la respuesta)
-    startEchoBot(meeting.MeetingId, attendee.AttendeeId, attendee.JoinToken)
-      .catch((err) => console.error("❌ Error EchoBot:", err.message));
-
-    // Enviar respuesta una sola vez
-    res.json({
-      meeting,
-      attendee,
-      pipeline: mediaPipelineResponse.MediaCapturePipeline,
+    const client = new ChimeSDKMediaPipelinesClient({
+      region: process.env.AWS_REGION,
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      },
     });
+
+    // 🪣 Crear pipeline para grabar audio en S3
+    const pipelineParams = {
+      SourceType: "ChimeSdkMeeting",
+      SourceArn: `arn:aws:chime::${process.env.AWS_ACCOUNT_ID}:meeting/${meetingData.Meeting.MeetingId}`,
+      SinkType: "S3Bucket",
+      SinkArn: `arn:aws:s3:::${process.env.AWS_S3_BUCKET_NAME}`,
+    };
+
+    const pipeline = await client.send(
+      new CreateMediaCapturePipelineCommand(pipelineParams)
+    );
+
+    console.log(`✅ Media pipeline creada: ${pipeline.MediaCapturePipeline?.MediaPipelineId}`);
+
+    // ✅ Enviar respuesta al frontend (solo una vez)
+    res.json({
+      message: "Reunión y pipeline creados correctamente",
+      meetingData,
+      pipelineId: pipeline.MediaCapturePipeline?.MediaPipelineId,
+    });
+
+    // 🧠 Iniciar el EchoBot después
+    try {
+      await startEchoBot(
+        meetingData.Meeting.MeetingId,
+        meetingData.Attendee.AttendeeId,
+        meetingData.Attendee.JoinToken
+      );
+      console.log("🎧 EchoBot escuchando y repitiendo...");
+    } catch (botError) {
+      console.error("❌ Error al iniciar EchoBot:", botError);
+    }
+
   } catch (error) {
     console.error("❌ Error al crear pipeline o bot:", error);
+
     if (!res.headersSent) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Error al unirse a la reunión o crear el pipeline" });
     }
   }
 });

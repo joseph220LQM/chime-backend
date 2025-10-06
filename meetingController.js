@@ -1,4 +1,8 @@
-import { ChimeSDKMeetingsClient, CreateMeetingCommand, CreateAttendeeCommand } from "@aws-sdk/client-chime-sdk-meetings";
+import {
+  ChimeSDKMeetingsClient,
+  CreateMeetingCommand,
+  CreateAttendeeCommand,
+} from "@aws-sdk/client-chime-sdk-meetings";
 import { v4 as uuidv4 } from "uuid";
 
 const client = new ChimeSDKMeetingsClient({ region: process.env.AWS_REGION });
@@ -16,7 +20,7 @@ async function createNewMeeting() {
   return meetingResponse.Meeting;
 }
 
-export async function joinMeeting(req, res) {
+export async function joinMeeting(req) {
   try {
     const { name } = req.body;
 
@@ -45,18 +49,17 @@ export async function joinMeeting(req, res) {
       }
     }
 
-    const data = {
+    // ✅ Solo retornamos los datos, sin enviar respuesta HTTP
+    return {
       Meeting: currentMeeting,
       Attendee: attendeeResponse.Attendee,
     };
-
-    res.json(data);
-    return data; // 👈 lo devolvemos para que index.js pueda usarlo
   } catch (error) {
     console.error("❌ Error en joinMeeting:", error);
-    res.status(500).json({ error: "Error al unirse a la reunión" });
+    throw error; // lo capturará index.js
   }
 }
+
 
 
 
