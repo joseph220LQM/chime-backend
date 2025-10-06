@@ -15,7 +15,7 @@ app.use(express.json());
 app.post("/join", async (req, res) => {
   try {
     // 🧩 Crear reunión y obtener datos
-    const meetingData = await joinMeeting(req);
+    const meetingData = await joinMeeting(req, res);
 
     const client = new ChimeSDKMediaPipelinesClient({
       region: process.env.AWS_REGION,
@@ -39,14 +39,14 @@ app.post("/join", async (req, res) => {
 
     console.log(`✅ Media pipeline creada: ${pipeline.MediaCapturePipeline?.MediaPipelineId}`);
 
-    // ✅ Enviar respuesta al frontend (solo una vez)
+    // ✅ Enviamos la respuesta al frontend *antes* de iniciar el bot
     res.json({
       message: "Reunión y pipeline creados correctamente",
       meetingData,
       pipelineId: pipeline.MediaCapturePipeline?.MediaPipelineId,
     });
 
-    // 🧠 Iniciar el EchoBot después
+    // 🧠 Iniciar el EchoBot después (no bloquea al cliente)
     try {
       await startEchoBot(
         meetingData.Meeting.MeetingId,
@@ -61,6 +61,7 @@ app.post("/join", async (req, res) => {
   } catch (error) {
     console.error("❌ Error al crear pipeline o bot:", error);
 
+    // Evita enviar doble respuesta si ya se envió una
     if (!res.headersSent) {
       res.status(500).json({ error: "Error al unirse a la reunión o crear el pipeline" });
     }
@@ -69,3 +70,4 @@ app.post("/join", async (req, res) => {
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`🚀 Backend corriendo en puerto ${PORT}`));
+
