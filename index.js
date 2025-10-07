@@ -2,9 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { joinMeeting } from "./meetingController.js";
-import { startEchoBot } from "./echobot.js";
 import pkg from "@aws-sdk/client-chime-sdk-media-pipelines";
-
 const { ChimeSDKMediaPipelinesClient, CreateMediaCapturePipelineCommand } = pkg;
 
 dotenv.config();
@@ -15,9 +13,10 @@ app.use(express.json());
 
 app.post("/join", async (req, res) => {
   try {
-    // 🧩 Crear reunión y obtener datos
-    const meetingData = await joinMeeting(req);
+    // 🧩 Crear la reunión y el participante
+    const meetingData = await joinMeeting(req, res);
 
+    // 🪣 Crear el cliente del pipeline
     const client = new ChimeSDKMediaPipelinesClient({
       region: process.env.AWS_REGION,
       credentials: {
@@ -26,7 +25,7 @@ app.post("/join", async (req, res) => {
       },
     });
 
-    // 🪣 Crear pipeline para grabar audio en S3
+    // 🎧 Grabar la reunión en tu bucket S3
     const pipelineParams = {
       SourceType: "ChimeSdkMeeting",
       SourceArn: `arn:aws:chime::${process.env.AWS_ACCOUNT_ID}:meeting/${meetingData.Meeting.MeetingId}`,
@@ -40,28 +39,15 @@ app.post("/join", async (req, res) => {
 
     console.log(`✅ Media pipeline creada: ${pipeline.MediaCapturePipeline?.MediaPipelineId}`);
 
-    // ✅ Enviamos la respuesta al frontend
-  res.json({
-    Meeting: meetingData.Meeting,
-    Attendee: meetingData.Attendee,
-    pipelineId: pipeline.MediaCapturePipeline?.MediaPipelineId,
-});
-
-    // 🧠 Iniciar el EchoBot después (no bloquea al cliente)
-try {
-  await startEchoBot(
-    meetingData.Meeting.MeetingId,
-    meetingData.Attendee.AttendeeId,
-    meetingData.Attendee.JoinToken
-  );
-  console.log("🎧 EchoBot escuchando y repitiendo...");
-} catch (botError) {
-  console.error("⚠️ Error al iniciar EchoBot:", botError.message);
-}
-
+    // Enviar respuesta al frontend
+    res.json({
+      message: "Reunión creada correctamente",
+      meetingData,
+      pipelineId: pipeline.MediaCapturePipeline?.MediaPipelineId,
+    });
 
   } catch (error) {
-    console.error("❌ Error al crear pipeline o bot:", error);
+    console.error("❌ Error al crear la reunión o pipeline:", error);
 
     if (!res.headersSent) {
       res.status(500).json({ error: "Error al unirse a la reunión o crear el pipeline" });
@@ -71,5 +57,6 @@ try {
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`🚀 Backend corriendo en puerto ${PORT}`));
+
 
 
