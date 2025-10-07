@@ -1,3 +1,4 @@
+import "dotenv/config";
 import WebSocket from "ws";
 import { PassThrough } from "stream";
 
@@ -7,7 +8,6 @@ const ELEVENLABS_VOICE_ID = process.env.ELEVENLABS_VOICE_ID;
 export function startEchoBot(meetingId, attendeeId, joinToken) {
   console.log("🎧 EchoBot escuchando y repitiendo...");
 
-  // Conexión directa al Realtime API de ElevenLabs
   const ws = new WebSocket(
     `wss://api.elevenlabs.io/v1/realtime/ws?model_id=eleven_turbo_v2_5&voice_id=${ELEVENLABS_VOICE_ID}`,
     {
@@ -22,7 +22,6 @@ export function startEchoBot(meetingId, attendeeId, joinToken) {
   ws.on("open", () => {
     console.log("🔗 Conectado a ElevenLabs Realtime API ✅");
 
-    // Simulamos texto entrante para generar voz
     setTimeout(() => {
       const text = "Hola, estoy conectado correctamente con ElevenLabs.";
       ws.send(JSON.stringify({ type: "input_text", text }));
