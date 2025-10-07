@@ -5,7 +5,7 @@ import { PassThrough } from "stream";
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 const ELEVENLABS_VOICE_ID = process.env.ELEVENLABS_VOICE_ID;
 
-export function startEchoBot(meetingId, attendeeId, joinToken) {
+export function startEchoBot(meetingId, attendeeId, joinToken, apiKey, voiceId) {
   console.log("🎧 EchoBot escuchando y repitiendo...");
 
   const ws = new WebSocket(
