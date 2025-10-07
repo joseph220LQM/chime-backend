@@ -41,11 +41,11 @@ app.post("/join", async (req, res) => {
     console.log(`✅ Media pipeline creada: ${pipeline.MediaCapturePipeline?.MediaPipelineId}`);
 
     // ✅ Enviamos la respuesta al frontend
-    res.json({
-      message: "Reunión y pipeline creados correctamente",
-      meetingData,
-      pipelineId: pipeline.MediaCapturePipeline?.MediaPipelineId,
-    });
+  res.json({
+    Meeting: meetingData.Meeting,
+    Attendee: meetingData.Attendee,
+    pipelineId: pipeline.MediaCapturePipeline?.MediaPipelineId,
+});
 
     // 🧠 Iniciar el EchoBot después (no bloquea al cliente)
 try {

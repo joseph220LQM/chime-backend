@@ -1,6 +1,5 @@
 import "dotenv/config";
 import WebSocket from "ws";
-import fetch from "node-fetch";
 
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 const ELEVENLABS_VOICE_ID = process.env.ELEVENLABS_VOICE_ID;
@@ -13,34 +12,21 @@ export async function startEchoBot(meetingId, attendeeId, joinToken) {
   }
 
   try {
-    // 1️⃣ Crear sesión temporal
-    const sessionRes = await fetch("https://api.elevenlabs.io/v1/realtime/sessions", {
-      method: "POST",
-      headers: {
-        "xi-api-key": ELEVENLABS_API_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        voice: ELEVENLABS_VOICE_ID,
-        model_id: "eleven_turbo_v2_5",
-      }),
-    });
-
-    if (!sessionRes.ok) {
-      throw new Error(`No se pudo crear sesión ElevenLabs (${sessionRes.status})`);
-    }
-
-    const { session_id } = await sessionRes.json();
-
-    if (!session_id) throw new Error("No se recibió session_id de ElevenLabs");
-
-    // 2️⃣ Conectarse al WebSocket con el session_id
-    const wsUrl = `wss://api.elevenlabs.io/v1/realtime/ws?session_id=${session_id}`;
-    const ws = new WebSocket(wsUrl);
+    const ws = new WebSocket(
+      `wss://api.elevenlabs.io/v1/realtime/ws?model_id=eleven_turbo_v2_5&voice_id=${ELEVENLABS_VOICE_ID}`,
+      {
+        headers: {
+          "xi-api-key": ELEVENLABS_API_KEY,
+        },
+      }
+    );
 
     ws.on("open", () => {
       console.log("🔗 EchoBot conectado al Realtime API ✅");
-      ws.send(JSON.stringify({ type: "input_text", text: "Hola, la conexión con ElevenLabs está funcionando correctamente." }));
+      ws.send(JSON.stringify({
+        type: "input_text",
+        text: "Hola, la conexión con ElevenLabs está funcionando correctamente."
+      }));
     });
 
     ws.on("message", (msg) => {
