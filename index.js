@@ -48,13 +48,17 @@ app.post("/join", async (req, res) => {
     });
 
     // 🧠 Iniciar el EchoBot después (no bloquea al cliente)
-    startEchoBot(
-      meetingData.Meeting.MeetingId,
-      meetingData.Attendee.AttendeeId,
-      meetingData.Attendee.JoinToken
-    )
-      .then(() => console.log("🎧 EchoBot escuchando y repitiendo..."))
-      .catch((botError) => console.error("❌ Error al iniciar EchoBot:", botError));
+try {
+  await startEchoBot(
+    meetingData.Meeting.MeetingId,
+    meetingData.Attendee.AttendeeId,
+    meetingData.Attendee.JoinToken
+  );
+  console.log("🎧 EchoBot escuchando y repitiendo...");
+} catch (botError) {
+  console.error("⚠️ Error al iniciar EchoBot:", botError.message);
+}
+
 
   } catch (error) {
     console.error("❌ Error al crear pipeline o bot:", error);
