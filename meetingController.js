@@ -16,7 +16,7 @@ async function createNewMeeting() {
   return meetingResponse.Meeting;
 }
 
-export async function joinMeeting(req, res) {
+export async function joinMeeting(req) {
   try {
     const { name } = req.body;
 
@@ -45,18 +45,17 @@ export async function joinMeeting(req, res) {
       }
     }
 
-    const data = {
+    // 👇 Ya no enviamos respuesta HTTP aquí
+    return {
       Meeting: currentMeeting,
       Attendee: attendeeResponse.Attendee,
     };
-
-    res.json(data);
-    return data; // 👈 lo devolvemos para que index.js pueda usarlo
   } catch (error) {
     console.error("❌ Error en joinMeeting:", error);
-    res.status(500).json({ error: "Error al unirse a la reunión" });
+    throw error; // dejamos que el index.js maneje el error
   }
 }
+
 
 
 

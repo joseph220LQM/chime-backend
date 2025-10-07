@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { joinMeeting } from "./meetingController.js";
 import { startEchoBot } from "./echobot.js";
 import pkg from "@aws-sdk/client-chime-sdk-media-pipelines";
+
 const { ChimeSDKMediaPipelinesClient, CreateMediaCapturePipelineCommand } = pkg;
 
 dotenv.config();
@@ -15,7 +16,7 @@ app.use(express.json());
 app.post("/join", async (req, res) => {
   try {
     // 🧩 Crear reunión y obtener datos
-    const meetingData = await joinMeeting(req, res);
+    const meetingData = await joinMeeting(req);
 
     const client = new ChimeSDKMediaPipelinesClient({
       region: process.env.AWS_REGION,
@@ -39,7 +40,7 @@ app.post("/join", async (req, res) => {
 
     console.log(`✅ Media pipeline creada: ${pipeline.MediaCapturePipeline?.MediaPipelineId}`);
 
-    // ✅ Enviamos la respuesta al frontend *antes* de iniciar el bot
+    // ✅ Enviamos la respuesta al frontend
     res.json({
       message: "Reunión y pipeline creados correctamente",
       meetingData,
@@ -47,23 +48,17 @@ app.post("/join", async (req, res) => {
     });
 
     // 🧠 Iniciar el EchoBot después (no bloquea al cliente)
-    try {
-      await startEchoBot(
-        meetingData.Meeting.MeetingId,
-        meetingData.Attendee.AttendeeId,
-        meetingData.Attendee.JoinToken,
-        process.env.ELEVENLABS_API_KEY,
-        process.env.ELEVENLABS_VOICE_ID
-      );
-      console.log("🎧 EchoBot escuchando y repitiendo...");
-    } catch (botError) {
-      console.error("❌ Error al iniciar EchoBot:", botError);
-    }
+    startEchoBot(
+      meetingData.Meeting.MeetingId,
+      meetingData.Attendee.AttendeeId,
+      meetingData.Attendee.JoinToken
+    )
+      .then(() => console.log("🎧 EchoBot escuchando y repitiendo..."))
+      .catch((botError) => console.error("❌ Error al iniciar EchoBot:", botError));
 
   } catch (error) {
     console.error("❌ Error al crear pipeline o bot:", error);
 
-    // Evita enviar doble respuesta si ya se envió una
     if (!res.headersSent) {
       res.status(500).json({ error: "Error al unirse a la reunión o crear el pipeline" });
     }
@@ -72,4 +67,5 @@ app.post("/join", async (req, res) => {
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`🚀 Backend corriendo en puerto ${PORT}`));
+
 
