@@ -19,7 +19,6 @@ async function createNewMeeting() {
 export async function joinMeeting(req, res) {
   try {
     const { name } = req.body;
-
     if (!currentMeeting) currentMeeting = await createNewMeeting();
 
     let attendeeResponse;
@@ -32,7 +31,7 @@ export async function joinMeeting(req, res) {
       );
     } catch (err) {
       if (err.name === "NotFoundException") {
-        console.log("⚠️ La reunión expiró. Creando una nueva...");
+        console.log("⚠️ Reunión expirada. Creando nueva...");
         currentMeeting = await createNewMeeting();
         attendeeResponse = await client.send(
           new CreateAttendeeCommand({
@@ -40,16 +39,10 @@ export async function joinMeeting(req, res) {
             ExternalUserId: `${name}-${uuidv4().substring(0, 8)}`,
           })
         );
-      } else {
-        throw err;
-      }
+      } else throw err;
     }
 
-    const data = {
-      Meeting: currentMeeting,
-      Attendee: attendeeResponse.Attendee,
-    };
-
+    const data = { Meeting: currentMeeting, Attendee: attendeeResponse.Attendee };
     res.json(data);
     return data;
   } catch (error) {
@@ -57,6 +50,7 @@ export async function joinMeeting(req, res) {
     res.status(500).json({ error: "Error al unirse a la reunión" });
   }
 }
+
 
 
 
