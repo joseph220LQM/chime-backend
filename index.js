@@ -64,6 +64,34 @@ app.post("/join", async (req, res) => {
       res.status(500).json({ error: "No se pudo crear la reunión" });
   }
 });
+// 🧩 Endpoint que se llama automáticamente cuando Amazon Connect transfiere la llamada
+app.post("/voiceConnector/incoming", async (req, res) => {
+  try {
+    console.log("📞 Llamada entrante desde Amazon Connect...");
+
+    // 1️⃣ Crear reunión nueva
+    const meetingResponse = await fetch(`${process.env.BACKEND_URL}/join`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Cliente Connect" }),
+    });
+    const meetingData = await meetingResponse.json();
+
+    // 2️⃣ Invitar al bot Mozart automáticamente
+    await fetch(`${process.env.BACKEND_URL}/bot/join`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ meetingData }),
+    });
+
+    console.log("🤖 Bot Mozart invitado a la llamada.");
+    res.status(200).json({ message: "Reunión iniciada y bot unido." });
+  } catch (err) {
+    console.error("❌ Error en llamada entrante:", err.message);
+    res.status(500).json({ error: "Error al procesar llamada entrante" });
+  }
+});
+
 
 
 // 🎧 Token para ElevenLabs
