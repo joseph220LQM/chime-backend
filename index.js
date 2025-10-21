@@ -1,3 +1,4 @@
+//index.js
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -5,6 +6,7 @@ import fetch from "node-fetch";
 import { joinMeeting } from "./meetingController.js";
 import { createElevenToken } from "./elevenController.js";
 import { botJoin } from "./botController.js";
+import { getCurrentMeeting } from "./meetingController.js";
 import pkg from "@aws-sdk/client-chime-sdk-media-pipelines";
 
 const { ChimeSDKMediaPipelinesClient, CreateMediaCapturePipelineCommand } = pkg;
@@ -68,6 +70,9 @@ app.post("/join", async (req, res) => {
 app.get("/api/get-conversation-token", createElevenToken);
 // Endpoint para invitar automáticamente a Mozart
 app.post("/bot/join", botJoin);
+// 🧠 Devuelve la reunión actual (para la Lambda de SIP Media App)
+app.get("/currentMeeting", getCurrentMeeting);
+
 
 
 const PORT = process.env.PORT || 4000;

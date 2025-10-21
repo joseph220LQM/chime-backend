@@ -1,3 +1,4 @@
+//meetinngcontroller.js
 import { ChimeSDKMeetingsClient, CreateMeetingCommand, CreateAttendeeCommand } from "@aws-sdk/client-chime-sdk-meetings";
 import { v4 as uuidv4 } from "uuid";
 
@@ -50,6 +51,22 @@ export async function joinMeeting(req, res) {
     res.status(500).json({ error: "Error al unirse a la reunión" });
   }
 }
+export async function getCurrentMeeting(req, res) {
+  try {
+    if (!currentMeeting) {
+      return res.status(404).json({ error: "No hay reunión activa" });
+    }
+
+    res.json({
+      meetingId: currentMeeting.MeetingId,
+      meetingData: currentMeeting,
+    });
+  } catch (error) {
+    console.error("❌ Error al obtener reunión actual:", error);
+    res.status(500).json({ error: "Error interno" });
+  }
+}
+
 
 
 
