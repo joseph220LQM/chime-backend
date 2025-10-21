@@ -57,9 +57,19 @@ export async function getCurrentMeeting(req, res) {
       return res.status(404).json({ error: "No hay reunión activa" });
     }
 
+    // ⚙️ Crear un "attendee temporal" para el puente SIP
+    const attendeeResponse = await client.send(
+      new CreateAttendeeCommand({
+        MeetingId: currentMeeting.MeetingId,
+        ExternalUserId: `lambda-bridge-${Date.now()}`,
+      })
+    );
+
     res.json({
-      meetingId: currentMeeting.MeetingId,
-      meetingData: currentMeeting,
+      meetingData: {
+        Meeting: currentMeeting,
+        Attendee: attendeeResponse.Attendee,
+      },
     });
   } catch (error) {
     console.error("❌ Error al obtener reunión actual:", error);
